@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#xC544;&#xC774;&#xC2A4;&#xD06C;&#xB9BC; &#xD0A4;&#xC624;&#xC2A4;&#xD06C;</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="store-name">&#xC2A4;&#xCFE1;&#xC815;&#xC6D0;</p>
+        <p class="eyebrow">Sweet Scoop Kiosk</p>
+        <h1>&#xC2A4;&#xCFE1;&#xC815;&#xC6D0; &#xD0A4;&#xC624;&#xC2A4;&#xD06C;</h1>
+        <p class="hero-text">&#xD551;&#xD06C;, &#xC610;&#xB85C;, &#xBBFC;&#xD2B8;, &#xBE14;&#xB8E8;, &#xB124;&#xC774;&#xBE44; &#xD314;&#xB808;&#xD2B8;&#xB85C; &#xAE30;&#xBD84; &#xC88B;&#xC740; &#xC8FC;&#xBB38; &#xD750;&#xB984;&#xC744; &#xB9CC;&#xB4E4;&#xC5C8;&#xC5B4;&#xC694;.</p>
+        <div class="hero-pills">
+          <span class="hero-pill">&#xC2F1;&#xAE00; 3,500&#xC6D0;</span>
+          <span class="hero-pill">&#xB354;&#xBE14; 5,500&#xC6D0;</span>
+          <span class="hero-pill">&#xD2B8;&#xB9AC;&#xD50C; 7,500&#xC6D0;</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="ice-grid">
+          <div class="ice-icon pop-stripe"><span class="stick"></span></div>
+          <div class="ice-icon pop-dip"><span class="stick"></span></div>
+          <div class="ice-icon pop-watermelon"><span class="stick"></span></div>
+          <div class="ice-icon pop-choco"><span class="stick"></span></div>
+          <div class="ice-icon cone-swirl"><span class="cone-shape"></span></div>
+          <div class="ice-icon cone-double"><span class="cone-shape"></span></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <form id="orderForm" class="kiosk-form">
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">1</span>
+            <div>
+              <h2>&#xBA54;&#xC778; &#xBA54;&#xB274;</h2>
+              <p>&#xCEE8; &#xC218;&#xC640; &#xB9DB; &#xAC1C;&#xC218;&#xAC00; &#xC790;&#xB3D9;&#xC73C;&#xB85C; &#xC5F0;&#xACB0;&#xB3FC;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid plan-grid" id="menuGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">2</span>
+            <div>
+              <h2>&#xB9DB; &#xC120;&#xD0DD;</h2>
+              <p id="flavorGuide">&#xBA3C;&#xC800; &#xBA54;&#xC778; &#xBA54;&#xB274;&#xB97C; &#xC120;&#xD0DD;&#xD574;&#xC8FC;&#xC138;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid flavor-grid" id="flavorGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">3</span>
+            <div>
+              <h2>&#xC6A9;&#xAE30; &#xC120;&#xD0DD;</h2>
+              <p>1&#xAC1C;&#xB97C; &#xAF2D; &#xC120;&#xD0DD;&#xD574;&#xC57C; &#xD574;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid option-grid" id="containerGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">4</span>
+            <div>
+              <h2>&#xCD94;&#xAC00; &#xC635;&#xC158;</h2>
+              <p>&#xC6D0;&#xD558;&#xB294; &#xD1A0;&#xD551;&#xACFC; &#xC2DC;&#xB7FD;&#xC744; &#xC790;&#xC720;&#xB86D;&#xAC8C; &#xB354;&#xD574;&#xBCF4;&#xC138;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid option-grid" id="addonGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">5</span>
+            <div>
+              <h2>&#xC22B;&#xAC00;&#xB77D; &#xC120;&#xD0DD;</h2>
+              <p>&#xD544;&#xC694;&#xD55C; &#xAC1C;&#xC218;&#xB97C; &#xACE8;&#xB77C;&#xC8FC;&#xC138;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid spoon-grid" id="spoonGrid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <span class="step-badge">6</span>
+            <div>
+              <h2>&#xBAA9;&#xC801;&#xC9C0;&#xAE4C;&#xC9C0;&#xC758; &#xB3C4;&#xCC29; &#xC2DC;&#xAC04;</h2>
+              <p>&#xC774;&#xB3D9; &#xC2DC;&#xAC04;&#xC5D0; &#xB9DE;&#xCDB0; &#xBCF4;&#xB0C9; &#xC548;&#xB0B4;&#xB97C; &#xC900;&#xBE44;&#xD574;&#xB4DC;&#xB824;&#xC694;.</p>
+            </div>
+          </div>
+          <div class="card-grid eta-grid" id="etaGrid"></div>
+        </section>
+      </form>
+
+      <aside class="summary-panel">
+        <div class="summary-sticky">
+          <div class="summary-header">
+            <p class="eyebrow">Order Summary</p>
+            <h2>&#xD604;&#xC7AC; &#xC8FC;&#xBB38;</h2>
+          </div>
+          <div class="receipt" id="summaryContent"></div>
+          <button type="button" class="cta-button" id="submitButton">&#xC8FC;&#xBB38;&#xD558;&#xAE30;</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="orderDialog" class="order-dialog">
+    <div class="dialog-card">
+      <h3>&#xC8FC;&#xBB38;&#xC774; &#xC900;&#xBE44;&#xB418;&#xC5C8;&#xC5B4;&#xC694;</h3>
+      <p id="dialogMessage"></p>
+      <button type="button" class="cta-button" id="closeDialog">&#xB2E4;&#xC2DC; &#xACE0;&#xB974;&#xAE30;</button>
+    </div>
+  </dialog>
+
+  <script src="script.js"></script>
+</body>
+</html>
