@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>HUD Clock</title>
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HUD Clock">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Mirrored HUD clock for iPad reflection use.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="app-icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <button
+      class="settings-toggle"
+      id="settingsToggle"
+      type="button"
+      aria-controls="settingsPanel"
+      aria-expanded="false"
+    >
+      배경
+    </button>
+
+    <section class="clock-stage" aria-label="반사형 HUD 시계">
+      <time class="clock-display" id="clock" aria-live="polite">00:00</time>
+    </section>
+
+    <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
+      <div class="settings-card">
+        <div class="settings-copy">
+          <p class="settings-label">Background</p>
+          <h1>배경색</h1>
+          <p>기본은 검정 배경이고, 원하는 색으로 바로 바꿀 수 있어요.</p>
+        </div>
+
+        <div class="preset-list" id="presetList">
+          <button class="preset is-active" type="button" data-color="#000000" style="--swatch:#000000;">검정</button>
+          <button class="preset" type="button" data-color="#0f172a" style="--swatch:#0f172a;">남색</button>
+          <button class="preset" type="button" data-color="#1f2937" style="--swatch:#1f2937;">차콜</button>
+          <button class="preset" type="button" data-color="#1d4ed8" style="--swatch:#1d4ed8;">블루</button>
+          <button class="preset" type="button" data-color="#14532d" style="--swatch:#14532d;">그린</button>
+          <button class="preset" type="button" data-color="#7f1d1d" style="--swatch:#7f1d1d;">레드</button>
+        </div>
+
+        <label class="custom-picker" for="backgroundColor">
+          <span>직접 선택</span>
+          <input id="backgroundColor" type="color" value="#000000">
+        </label>
+
+        <label class="toggle-row" for="showSeconds">
+          <div class="toggle-copy">
+            <span class="toggle-title">초 표시</span>
+            <span class="toggle-description">시간을 HH:MM:SS 형태로 보여줘요.</span>
+          </div>
+          <span class="toggle-switch">
+            <input id="showSeconds" type="checkbox">
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </span>
+        </label>
+
+        <p class="install-hint">아이패드 사파리에서 공유 버튼을 누른 뒤 홈 화면에 추가하면 앱처럼 열 수 있어요.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
