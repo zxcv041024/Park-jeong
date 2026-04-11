@@ -7,6 +7,7 @@ const presetButtons = Array.from(document.querySelectorAll(".preset"));
 
 const BACKGROUND_KEY = "hud-clock-background";
 const SHOW_SECONDS_KEY = "hud-clock-show-seconds";
+const BASE_PATH = window.location.pathname.includes("/Park-jeong/") ? "/Park-jeong" : "";
 
 function formatTime(date, showSeconds) {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -98,3 +99,11 @@ applyBackground(savedBackground || "#000000");
 updateClock();
 
 setInterval(updateClock, 1000);
+
+if ("serviceWorker" in navigator && window.location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${BASE_PATH}/service-worker.js`).catch(() => {
+      // PWA registration failure should not block the clock UI.
+    });
+  });
+}
