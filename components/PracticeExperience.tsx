@@ -8,6 +8,7 @@ import { loadGeneratedSong } from "@/lib/storage";
 
 type Judgement = "Perfect" | "Miss";
 type HitEvent = { id: number; note: string; judgement: Judgement };
+type PitchResult = { frequency: number; clarity: number; rms: number };
 
 const rollHeight = 520;
 const currentBarBottom = 0;
@@ -44,7 +45,7 @@ function getKeyLabel(note: string) {
   return note.replace(/\d/g, "");
 }
 
-function frequencyToNearestNote(frequency: number) {
+function frequencyToNearestNote(frequency: number, toleranceCents = 80) {
   let best = pianoKeys[0];
   let bestDistance = Number.POSITIVE_INFINITY;
   for (const note of pianoKeys) {
@@ -54,34 +55,72 @@ function frequencyToNearestNote(frequency: number) {
       bestDistance = distance;
     }
   }
-  return bestDistance <= 70 ? best : null;
+  return bestDistance <= toleranceCents ? best : null;
 }
 
-function detectPitch(buffer: Float32Array, sampleRate: number) {
+function resolveDetectedNote(frequency: number, targetNote?: string) {
+  if (targetNote) {
+    const targetFrequency = noteToFrequency(targetNote);
+    const candidates = [frequency, frequency / 2, frequency * 2];
+    const targetWasHeard = candidates.some((candidate) => Math.abs(1200 * Math.log2(candidate / targetFrequency)) <= 95);
+    if (targetWasHeard) return targetNote;
+  }
+
+  return frequencyToNearestNote(frequency);
+}
+
+function detectPitch(buffer: Float32Array, sampleRate: number): PitchResult | null {
   let rms = 0;
   for (const value of buffer) rms += value * value;
   rms = Math.sqrt(rms / buffer.length);
-  if (rms < 0.012) return null;
+  if (rms < 0.008) return null;
 
-  let bestOffset = -1;
-  let bestCorrelation = 0;
-  const minOffset = Math.floor(sampleRate / 1000);
-  const maxOffset = Math.floor(sampleRate / 70);
+  const minFrequency = 70;
+  const maxFrequency = 1100;
+  const minLag = Math.floor(sampleRate / maxFrequency);
+  const maxLag = Math.min(Math.floor(sampleRate / minFrequency), Math.floor(buffer.length / 2));
+  const correlations = new Float32Array(maxLag + 1);
 
-  for (let offset = minOffset; offset <= maxOffset; offset += 1) {
-    let correlation = 0;
-    for (let index = 0; index < buffer.length - offset; index += 1) {
-      correlation += buffer[index] * buffer[index + offset];
+  for (let lag = minLag; lag <= maxLag; lag += 1) {
+    let sum = 0;
+    let leftEnergy = 0;
+    let rightEnergy = 0;
+    for (let index = 0; index < buffer.length - lag; index += 1) {
+      const left = buffer[index];
+      const right = buffer[index + lag];
+      sum += left * right;
+      leftEnergy += left * left;
+      rightEnergy += right * right;
     }
-    correlation /= buffer.length - offset;
-    if (correlation > bestCorrelation) {
-      bestCorrelation = correlation;
-      bestOffset = offset;
+    correlations[lag] = sum / Math.sqrt(leftEnergy * rightEnergy || 1);
+  }
+
+  let bestLag = -1;
+  let bestCorrelation = 0;
+  const threshold = 0.62;
+  for (let lag = minLag + 1; lag < maxLag - 1; lag += 1) {
+    const current = correlations[lag];
+    if (current > threshold && current >= correlations[lag - 1] && current > correlations[lag + 1]) {
+      bestLag = lag;
+      bestCorrelation = current;
+      break;
+    }
+    if (current > bestCorrelation) {
+      bestLag = lag;
+      bestCorrelation = current;
     }
   }
 
-  if (bestCorrelation < 0.003 || bestOffset <= 0) return null;
-  return sampleRate / bestOffset;
+  if (bestCorrelation < 0.45 || bestLag <= 0) return null;
+
+  const left = correlations[bestLag - 1] || 0;
+  const center = correlations[bestLag];
+  const right = correlations[bestLag + 1] || 0;
+  const denominator = left - 2 * center + right;
+  const shift = denominator === 0 ? 0 : 0.5 * (left - right) / denominator;
+  const frequency = sampleRate / (bestLag + shift);
+
+  return { frequency, clarity: bestCorrelation, rms };
 }
 
 function playPianoTone(note: string) {
@@ -234,6 +273,10 @@ export function PracticeExperience() {
     if (note !== targetNote.note) {
       setWrongPressed(note);
       window.setTimeout(() => setWrongPressed(null), 380);
+      if (source === "mic") {
+        setMicStatus(`감지: ${note} · 목표: ${targetNote.note}`);
+        return;
+      }
       setCombo(0);
       addHit(note, "Miss");
       setMicStatus(`다른 음 인식: ${note}`);
@@ -270,21 +313,24 @@ export function PracticeExperience() {
         }
       });
       const context = new AudioContext();
+      await context.resume();
       const analyser = context.createAnalyser();
-      analyser.fftSize = 4096;
-      analyser.smoothingTimeConstant = 0.15;
+      analyser.fftSize = 8192;
+      analyser.smoothingTimeConstant = 0.05;
       const source = context.createMediaStreamSource(stream);
       source.connect(analyser);
       const buffer = new Float32Array(analyser.fftSize);
 
       const listen = () => {
         analyser.getFloatTimeDomainData(buffer);
-        const frequency = detectPitch(buffer, context.sampleRate);
-        const note = frequency ? frequencyToNearestNote(frequency) : null;
+        const pitch = detectPitch(buffer, context.sampleRate);
+        const note = pitch ? resolveDetectedNote(pitch.frequency, currentNoteRef.current?.note) : null;
         const now = performance.now();
-        if (note && now - lastDetectedRef.current.time > 360) {
+        if (note && now - lastDetectedRef.current.time > 220) {
           lastDetectedRef.current = { note, time: now };
           recognizeNote(note, "mic");
+        } else if (pitch && now - lastDetectedRef.current.time > 420) {
+          setMicStatus(`입력 감지 중 · ${Math.round(pitch.frequency)}Hz · 선명도 ${Math.round(pitch.clarity * 100)}%`);
         }
         const audio = audioRef.current;
         if (audio) audio.frame = requestAnimationFrame(listen);
