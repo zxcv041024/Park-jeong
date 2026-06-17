@@ -1,0 +1,9 @@
+.next/
+node_modules/
+.pnpm-store/
+out/
+
+*.log
+.env*.local
+
+next-env.d.ts
