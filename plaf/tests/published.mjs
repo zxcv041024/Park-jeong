@@ -1,0 +1,21 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+
+const url=process.env.PLAF_URL || 'https://zxcv041024.github.io/Park-jeong/plaf/index.html';
+await mkdir('tests/evidence',{recursive:true});
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--enable-unsafe-swiftshader']});
+const page=await browser.newPage({viewport:{width:1920,height:1080}}),errors=[],failures=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error') errors.push(m.text());});
+page.on('response',r=>{if(r.status()>=400) failures.push({url:r.url(),status:r.status()});});
+const response=await page.goto(url);assert.equal(response.status(),200);
+await page.waitForFunction(()=>window.__PLAF__?.snapshot().completed.includes('L'),{},{timeout:45000});
+let s=await page.evaluate(()=>window.__PLAF__.snapshot());assert.equal(s.targets.find(t=>t.text==='L').stomps,3);
+await page.locator('#letter-input').fill('G');await page.locator('#letter-input').press('Enter');
+await page.waitForFunction(()=>window.__PLAF__.snapshot().completed.includes('G'),{},{timeout:45000});
+s=await page.evaluate(()=>window.__PLAF__.snapshot());const g=s.targets.find(t=>t.text==='G');assert.equal(g.stomps,3);assert.equal(g.squash,.14);
+assert.equal(errors.length,0,errors.join('\n'));assert.equal(failures.length,0,JSON.stringify(failures));
+await page.screenshot({path:'tests/evidence/published.png'});
+await writeFile('tests/evidence/published-results.json',JSON.stringify({url,passed:true,errors,failures,final:s},null,2));
+console.log('PASS published HTML, all asset paths, three-stomp intro and G interaction, no browser errors');
+await browser.close();
