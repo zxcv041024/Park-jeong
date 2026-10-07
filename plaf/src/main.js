@@ -10,9 +10,10 @@ import { clamp, smooth, mix, distance, travelPlan, jumpSample, validPlacement, o
 const $ = id => document.getElementById(id);
 const canvas = $('scene'), controls = $('controls'), input = $('letter-input');
 const sound = new Foley();
+const ANIMATION_SPEED=1.3;
 const telemetry = { state: 'INTRO', completed: [], landings: 0, hops: 0, lastTarget: null, history: [] };
 // Read-only snapshot for QA; animation has a single owner and a single clock.
-window.__PLAF__ = { snapshot: () => ({ ...telemetry, history: [...telemetry.history], completed: [...telemetry.completed], queue: queue.map(t => t.text), lamp: { ...pose, size:1.12 }, travelSegment:travelSegment && {...travelSegment}, targets: targets.map(t => ({ id:t.id,text:t.text, x:t.x, z:t.z, width:t.width, height:t.height, spread:t.spread,squash:t.squash, stomps:t.stomps,status:t.status, initial:t.initial, opacity:t.mesh.material.opacity,rotation:[t.mesh.rotation.x,t.mesh.rotation.y,t.mesh.rotation.z],crushedAt:t.crushedAt })) }) };
+window.__PLAF__ = { snapshot: () => ({ ...telemetry, animationSpeed:ANIMATION_SPEED,history: [...telemetry.history], completed: [...telemetry.completed], queue: queue.map(t => t.text), lamp: { ...pose, size:1.12 }, travelSegment:travelSegment && {...travelSegment}, targets: targets.map(t => ({ id:t.id,text:t.text, x:t.x, z:t.z, width:t.width, height:t.height, spread:t.spread,squash:t.squash, stomps:t.stomps,status:t.status, initial:t.initial, opacity:t.mesh.material.opacity,rotation:[t.mesh.rotation.x,t.mesh.rotation.y,t.mesh.rotation.z],crushedAt:t.crushedAt })) }) };
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xb7c8da);
 scene.fog = new THREE.Fog(0xb7c8da, 42, 85);
 const camera = new THREE.OrthographicCamera(-12,12,6.75,-6.75,.1,120);
@@ -246,7 +247,7 @@ let last=performance.now(), raf, hidden=false;
 document.addEventListener('visibilitychange',()=> { hidden=document.hidden; last=performance.now(); });
 function frame(now) {
   raf=requestAnimationFrame(frame);
-  const dt=hidden ? 0 : Math.min((now-last)/1000,.045); last=now;clock+=dt;
+  const dt=hidden ? 0 : Math.min((now-last)/1000,.045)*ANIMATION_SPEED; last=now;clock+=dt;
   if(hidden) return;
   for(const t of [...targets]) {
     if(t.spawn<1) { t.spawn=clamp(t.spawn+dt*4);t.mesh.scale.set(t.scale*t.spread,t.scale*t.squash*smooth(t.spawn),t.scale); }

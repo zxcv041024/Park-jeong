@@ -25,9 +25,9 @@ The introduction starts automatically. The lamp enters from the right in repeate
 
 ## Animation
 
-One requestAnimationFrame clock owns a serialized action queue. Preparation and impact settlement keep the base stationary. Only the ballistic flight phase moves horizontally. Travel distance determines the number of hops (maximum 1.85 world units per normal hop), each lasting about 0.78 seconds.
+One requestAnimationFrame clock owns a serialized action queue. Preparation and impact settlement keep the base stationary. Only the ballistic flight phase moves horizontally. Travel distance determines the number of hops (maximum 1.85 world units per normal hop), each lasting about 0.60 seconds. Motion runs at 1.3× speed, while target hold and fade timings use unscaled elapsed time.
 
-The lamp is constructed from original geometry: a domed base, separate articulated arms with coils and hinge caps, a rotating bell shade and emissive bulb. Joint angles change during compression and flight. The head controls a real spotlight, with a faint cone and a contact shadow that fades with height. Exactly three stomps press upright geometry vertically to 70%, 40%, then 14%, over 0.48, 0.62 and 0.82 seconds; text never rotates, and spreading is limited to 10%. The lamp is 12% larger than the first version. A hidden tab pauses the action clock.
+The lamp is constructed from original geometry: a domed base, separate articulated arms with coils and hinge caps, a rotating bell shade and emissive bulb. Joint angles change during compression and flight. The head controls a real spotlight, with a faint cone and a contact shadow that fades with height. Exactly three stomps press upright geometry vertically to 70%, 40%, then 14%, over about 0.37, 0.48 and 0.63 seconds; text never rotates, and spreading is limited to 10%. The lamp is 12% larger than the first version. A hidden tab pauses the action clock.
 
 Each upright word has a rectangular physical footprint inflated by the lamp's clearance. A visibility graph and Dijkstra search find routes around these obstacles. The route is recalculated after every landing, allowing new queued letters to change the next hops. New placements cannot intersect a hop already in progress. Only the final intentional stomp enters the target footprint.
 
