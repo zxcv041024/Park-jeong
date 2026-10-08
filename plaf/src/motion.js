@@ -3,6 +3,23 @@ export const smooth = t => { t = clamp(t); return t * t * (3 - 2 * t); };
 export const mix = (a, b, t) => a + (b - a) * t;
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const lerpPoint = (a, b, t) => ({ x: mix(a.x, b.x, t), z: mix(a.z, b.z, t) });
+// Letter spacing is calculated after scaling so narrow glyphs still clear the lamp.
+export function layoutLetters(glyphs,maxWidth=16.8) {
+  const measured=scale=> {
+    const widths=glyphs.map(g=>g.width*scale);
+    const gaps=glyphs.map((g,i)=>i===0 ? 0 : Math.max(.42,1.18-Math.min(widths[i-1],widths[i])/2)+(g.extraGapBefore || 0)*scale);
+    return {widths,gaps,width:widths.reduce((a,b)=>a+b,0)+gaps.reduce((a,b)=>a+b,0)};
+  };
+  let scale=1;
+  if(measured(1).width>maxWidth) {
+    let low=0,high=1;
+    for(let i=0;i<24;i++) {const mid=(low+high)/2;if(measured(mid).width<=maxWidth) low=mid;else high=mid;}
+    scale=low;
+  }
+  const {widths,gaps,width}=measured(scale);let cursor=-width/2;
+  const members=glyphs.map((g,i)=> {cursor+=gaps[i];const x=cursor+widths[i]/2;cursor+=widths[i];return {...g,index:i,x,width:widths[i],height:g.height*scale};});
+  return {scale,width,height:Math.max(0,...members.map(g=>g.height)),members};
+}
 // No horizontal displacement during preparation or landing. Flight is ballistic.
 export function jumpSample(time, { from, to, fromY = 0, toY = 0, height = 1.5, flight = .46, prepare = .16, settle = .16 }) {
   if (time < prepare) return { ...from, y: fromY, compression: .62 * smooth(time / prepare), phase: 'PREPARE_JUMP', airborne: false, impact: 0 };

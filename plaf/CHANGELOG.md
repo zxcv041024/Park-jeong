@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3 — 2026-10-08
+
+- Place multi-character input as a word, then press each visible grapheme three times in left-to-right order.
+- Keep travel speed at 1.3× and speed up only stomp jumps and pauses by another 20%.
+- Use a thicker, cleaner Optimer Bold serif and bold system-serif glyphs for Korean.
+- Preserve repeated characters as separate targets and calculate spacing that keeps every next glyph reachable.
+- Keep the lamp visible during high stomps and accept up to eight Unicode graphemes without native input truncation.
+
 ## 1.0.2 — 2026-10-07
 
 - Run travel, presses and brief reactions at 1.3× speed while preserving the hop arcs and all three impacts.
