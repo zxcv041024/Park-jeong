@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#b7c8da" />
+  <meta name="description" content="글자를 건네면 작은 관절 램프가 통통 뛰어가 밟는 인터랙티브 3D 무대." />
+  <title>PLAF — A little light, a little mischief</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <script type="module" crossorigin src="./assets/index-DXfcLd_C.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-Q5MkjibS.js">
+  <link rel="modulepreload" crossorigin href="./assets/serif-DE_KF66_.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-C24fpZi7.css">
+</head>
+<body>
+  <main id="stage" aria-label="PLAF 인터랙티브 램프 무대">
+    <canvas id="scene" aria-label="램프가 글자를 찾아가 점프하는 3D 애니메이션"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <div id="loading" role="status">불을 켜는 중<span>···</span></div>
+    <div id="controls" class="controls" inert>
+      <form id="letter-form" autocomplete="off">
+        <label class="sr-only" for="letter-input">밟을 글자 또는 단어, 최대 8자</label>
+        <input id="letter-input" placeholder="글자를 입력하세요" spellcheck="false" aria-describedby="feedback" />
+        <button class="add" type="submit">추가 <span aria-hidden="true">↵</span></button>
+      </form>
+      <div class="utility">
+        <span id="queue-indicator" aria-live="polite">최대 8자</span>
+        <button id="sound" type="button" aria-pressed="false" title="직접 만든 효과음 켜기">Sound OFF</button>
+        <button id="replay" type="button">Intro Replay</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <p id="feedback" role="status" aria-live="polite"></p>
+    </div>
+    <p id="fatal" hidden role="alert">3D 무대를 시작하지 못했습니다. WebGL을 지원하는 브라우저에서 다시 열어 주세요.</p>
+  </main>
+</body>
+</html>
