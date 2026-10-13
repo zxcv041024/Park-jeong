@@ -1,0 +1,6 @@
+{
+  "letters": {"text":"글자 입력 (최대 8자)","type":"textbox","value":""},
+  "add": {"text":"입력한 글자 추가","type":"button","value":"추가"},
+  "reset": {"text":"무대 초기화","type":"button","value":"초기화"},
+  "replay": {"text":"인트로 다시 재생","type":"button","value":"재생"}
+}
