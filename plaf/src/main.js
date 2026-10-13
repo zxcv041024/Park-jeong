@@ -14,7 +14,7 @@ const ANIMATION_SPEED=1.3;
 const STOMP_SPEED=1.2;
 const telemetry = { state: 'INTRO', completed: [], completedDetails:[],landings: 0, hops: 0, lastTarget: null, history: [] };
 // Read-only snapshot for QA; animation has a single owner and a single clock.
-window.__PLAF__ = { snapshot: () => ({ ...telemetry, animationSpeed:ANIMATION_SPEED,stompSpeed:STOMP_SPEED,fontFamily:'Optimer Bold',history: [...telemetry.history], completed: [...telemetry.completed],completedDetails:telemetry.completedDetails.map(t=>({...t})), queue: queue.map(t => t.text), lamp: { ...pose, size:1.12 }, travelSegment:travelSegment && {...travelSegment}, targets: targets.map(t => ({ id:t.id,text:t.text,groupId:t.groupId,index:t.index,sourceText:t.sourceText,x:t.x, z:t.z, width:t.width, height:t.height, spread:t.spread,squash:t.squash, stomps:t.stomps,status:t.status, initial:t.initial, opacity:t.mesh.material.opacity,rotation:[t.mesh.rotation.x,t.mesh.rotation.y,t.mesh.rotation.z],crushedAt:t.crushedAt })) }) };
+window.__PLAF__ = { snapshot: () => ({ ...telemetry, animationSpeed:ANIMATION_SPEED,stompSpeed:STOMP_SPEED,fontFamily:'Optimer Bold',initialFrame:initialFrame(),history: [...telemetry.history], completed: [...telemetry.completed],completedDetails:telemetry.completedDetails.map(t=>({...t})), queue: queue.map(t => t.text), lamp: { ...pose, size:1.12 }, travelSegment:travelSegment && {...travelSegment}, targets: targets.map(t => ({ id:t.id,text:t.text,groupId:t.groupId,index:t.index,sourceText:t.sourceText,x:t.x, z:t.z, width:t.width, height:t.height, spread:t.spread,squash:t.squash, stomps:t.stomps,stompLimit:t.stompLimit,geometryBounds:t.mesh.geometry.boundingBox && {min:t.mesh.geometry.boundingBox.min.toArray(),max:t.mesh.geometry.boundingBox.max.toArray()},status:t.status, initial:t.initial, opacity:t.mesh.material.opacity,rotation:[t.mesh.rotation.x,t.mesh.rotation.y,t.mesh.rotation.z],crushedAt:t.crushedAt })) }) };
 const scene = new THREE.Scene(); scene.background = new THREE.Color(0xb7c8da);
 scene.fog = new THREE.Fog(0xb7c8da, 42, 85);
 const camera = new THREE.OrthographicCamera(-12,12,6.75,-6.75,.1,120);
@@ -71,7 +71,7 @@ const pose = { x:14, z:2.5, y:0, yaw:Math.PI, headYaw:0, headTilt:.86, compressi
 // View-space envelope includes the 1.12-scale lamp at every stomp compression/yaw.
 // Fixed upper framing space preserves queue capacity; camera position/aim never change.
 const STOMP_LAMP_ENVELOPE=3.25, MIN_STOMP_HEIGHT=.65, STOMP_TOP_LIMIT=.94;
-const MIN_FRAME_HEIGHT=16, FRAME_UP_OFFSET=1.25;
+const MIN_FRAME_HEIGHT=16, FRAME_UP_OFFSET=0;
 const stompViewUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
 function framedStompHeight(from,to,fromY,toY,height) {
   const project=(point,y)=>(point.x-cameraHome.x)*stompViewUp.x+(y-cameraHome.y)*stompViewUp.y+(point.z-cameraHome.z)*stompViewUp.z;
@@ -104,10 +104,10 @@ function queueLabel() { $('queue-indicator').textContent = queue.length ? `${que
 function textObject(text, x, z, initial=false,options={}) {
   const glyph=makeText(text),originalWidth=glyph.width,height=glyph.height;
   const scale = options.scale ?? Math.min(1, 8.2/originalWidth);
-  const mesh = glyph.mesh; mesh.scale.setScalar(scale); mesh.position.set(x,.025,z);
+  const mesh = glyph.mesh; if(mesh.geometry.userData.cached) {mesh.geometry=mesh.geometry.clone();mesh.geometry.userData.cached=false;} const originalPositions=mesh.geometry.attributes.position.array.slice(); mesh.scale.setScalar(scale); mesh.position.set(x,.025,z);
   if(!glyph.ownedMaterial) mesh.material=ink.clone();
   mesh.castShadow = true; mesh.receiveShadow = true; scene.add(mesh);
-  const t = { id:nextId++, text,x,z,mesh,width:originalWidth*scale,height:height*scale,scale,squash:1,stomps:0,status:'waiting',initial,spread:1,spawn:initial ? 1 : 0,crushedAt:null,groupId:options.groupId ?? null,index:options.index ?? 0,sourceText:options.sourceText ?? text };
+  const t = { originalPositions, stompLimit:options.stompLimit ?? 3, id:nextId++, text,x,z,mesh,width:originalWidth*scale,height:height*scale,scale,squash:1,stomps:0,status:'waiting',initial,spread:1,spawn:initial ? 1 : 0,crushedAt:null,groupId:options.groupId ?? null,index:options.index ?? 0,sourceText:options.sourceText ?? text };
   if(!initial) {
     mesh.material.transparent=true;
     mesh.customDepthMaterial ||= new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});
@@ -126,7 +126,25 @@ function updateTarget(t, scaleY) {
   t.squash = scaleY;
   t.spread = 1 + (1-scaleY)*.10;
   t.mesh.rotation.set(0,0,0);
-  t.mesh.scale.set(t.scale*t.spread,t.scale*scaleY,t.scale);
+  // Press vertically; the last press spreads the original outline across the floor.
+  // Remap vertices rather than rotating the glyph backwards like a hinged sign.
+  const flat=smooth((.40-scaleY)/(.40-.008)),positions=t.mesh.geometry.attributes.position;
+  for(let i=0;i<positions.count;i++) {
+    const at=i*3,x=t.originalPositions[at],y=t.originalPositions[at+1],z=t.originalPositions[at+2];
+    positions.setXYZ(i,x,y*scaleY,z-y*.65*flat);
+  }
+  positions.needsUpdate=true;t.mesh.geometry.computeBoundingBox();t.mesh.geometry.computeBoundingSphere();t.mesh.geometry.computeVertexNormals();
+  t.mesh.scale.set(t.scale*t.spread,t.scale,t.scale);
+}
+function initialFrame() {
+  const points=[];
+  for(const t of targets.filter(t=>t.initial)) {
+    // Use the original upright title bounds, even after L is pressed.
+    for(const x of [t.x-t.width/2,t.x+t.width/2]) for(const y of [.025,t.height+.025]) {
+      points.push(new THREE.Vector3(x,y,t.z).project(camera));
+    }
+  }
+  return {left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.max(...points.map(p=>p.y)),bottom:Math.min(...points.map(p=>p.y))};
 }
 function disposeTarget(t) {
   scene.remove(t.mesh);if(!t.mesh.geometry.userData.cached) t.mesh.geometry.dispose();t.mesh.material.map?.dispose();t.mesh.material.dispose();t.mesh.customDepthMaterial?.dispose();renderer.shadowMap.needsUpdate=true;
@@ -137,7 +155,10 @@ function clearStage() {
   targets = []; queue = []; actions = []; currentAction = null; activeTarget = null; currentStanding = null; actionTime=0;
   telemetry.completed=[];telemetry.completedDetails=[]; telemetry.landings=0; telemetry.hops=0; telemetry.history=[];
   shake=0;travelSegment=null;stompSegment=null; queueLabel(); input.value=''; showFeedback('');
-  return ['P','L','A','F'].map((s,i) => textObject(s,[-7.1,-2.45,2.45,7.1][i],0,true));
+  const letters=['P','L','A','F'].map((s,i) => textObject(s,[-7.1,-2.45,2.45,7.1][i],0,true));
+  const left=Math.min(...letters.map(t=>t.x-t.width/2)),right=Math.max(...letters.map(t=>t.x+t.width/2));
+  for(const t of letters) {t.x-=(left+right)/2;t.mesh.position.x=t.x;}
+  return letters;
 }
 const idle = (duration, phase, update, done,rate=1) => ({ duration, phase, update, done,rate });
 function addTravel(target) {
@@ -159,7 +180,8 @@ function addTravel(target) {
   actions.push(travel);
 }
 function makeJump(from,to,fromY,toY,height,flight=.48,stomp=0,target=null) {
-  const pressDuration=[.48,.62,.82][stomp-1] || .48;
+  const finalStomp=stomp && stomp===target.stompLimit;
+  const pressDuration=finalStomp ? .72 : .48;
   const prepare = stomp ? .26 : .17, settle = stomp ? pressDuration+.18 : .17;
   const opts = { from,to,fromY,toY,height,flight,prepare,settle };
   let impactDone=false, takeoffDone=false, squashStart;
@@ -171,11 +193,11 @@ function makeJump(from,to,fromY,toY,height,flight=.48,stomp=0,target=null) {
       if(!stomp) state(p.phase);
       if(t >= prepare && !takeoffDone) { takeoffDone=true; sound.play('jump'); telemetry.hops++; }
       if(t >= prepare+flight && !impactDone) {
-        impactDone=true; telemetry.landings++; sound.play(stomp ? 'stomp':'land',stomp === 3 ? 1.5 : stomp===2 ? 1.05 : .7);
+        impactDone=true; telemetry.landings++; sound.play(stomp ? 'stomp':'land',finalStomp ? 1.5 : stomp===2 ? 1.05 : .7);
         if(stomp) { squashStart=target.squash;target.stomps++; target.status=`stomp-${stomp}`; shake = [.027,.048,.085][stomp-1]; }
       }
       if(stomp && impactDone) {
-        const u=smooth((t-prepare-flight)/pressDuration), final=[.70,.40,.14][stomp-1];
+        const u=smooth((t-prepare-flight)/pressDuration), final=finalStomp ? .008 : target.stompLimit===2 ? .60 : [.70,.40][stomp-1];
         updateTarget(target,mix(squashStart,final,u)); pose.y=target.height*target.squash+.035;
         pose.compression=Math.max(pose.compression,.38*Math.sin(Math.PI*u));
       }
@@ -183,7 +205,8 @@ function makeJump(from,to,fromY,toY,height,flight=.48,stomp=0,target=null) {
     },
     done() {
       Object.assign(pose,{ x:to.x,z:to.z,y:stomp ? target.height*target.squash+.035 : toY,compression:0,impact:0,airborne:false });
-      if(stomp===3 && !target.initial) target.crushedAt=performance.now();
+      if(finalStomp) updateTarget(target,.008);
+      if(finalStomp && !target.initial) target.crushedAt=performance.now();
       if(stomp===1) stompSegment=null;
     }
   };
@@ -197,27 +220,32 @@ function finishTarget(t) {
   if(intro) { intro=false; showControls(); }
   queueLabel();
 }
-function scheduleTarget(t, isIntro=false) {
+function scheduleTarget(t, isIntro=false,continuing=false) {
   activeTarget=t; t.status='active'; currentStanding=null;
   const theta=toward(t), oldYaw=pose.yaw, delta=angleDiff(oldYaw,theta),oldHeadYaw=pose.headYaw,oldHeadTilt=pose.headTilt;
   const lookTilt=Math.atan2(distance(pose,t),Math.max(.25,pose.y+2.15-t.height*.42));
+  if(!continuing) {
   actions.push(idle(isIntro ? 1.1 : .48,'IDLE',() => { pose.compression=0; pose.impact=0; }));
   actions.push(idle(.36,'LOOK_AT_TARGET',u => { const p=smooth(u/.36);pose.headYaw=oldHeadYaw+angleDiff(oldHeadYaw,delta)*p; pose.headTilt=mix(oldHeadTilt,lookTilt,p); },() => sound.play('hinge')));
   actions.push(idle(.28,'LOOK_AT_TARGET',u => { const p=smooth(u/.28); pose.yaw=oldYaw+delta*p; pose.headYaw=delta*(1-p); }));
+  }
   addTravel(t);
-  actions.push(idle(.44,'APPROACHING_TARGET',u => {
-    const theta2=toward(t), p=smooth(u/.44); pose.yaw += angleDiff(pose.yaw,theta2)*p*.18; pose.headTilt=.72; pose.compression=0;
+  const approachPause=continuing ? .12 : .44;
+  actions.push(idle(approachPause,'APPROACHING_TARGET',u => {
+    const theta2=toward(t), p=smooth(u/approachPause); pose.yaw += angleDiff(pose.yaw,theta2)*p*.18; pose.headTilt=.72; pose.compression=0;
   }));
-  actions.push(makeJump({x:t.x,z:t.z+1.7},{x:t.x,z:t.z},0,t.height+.035,3.25,.72,1,t));
-  actions.push(idle(.22,'STOMP_1',() => { pose.compression=0;pose.headTilt=.45; },undefined,STOMP_SPEED));
-  actions.push(makeJump({x:t.x,z:t.z},{x:t.x,z:t.z},t.height*.7+.035,t.height*.7+.035,3.35,.77,2,t));
-  actions.push(idle(.22,'STOMP_2',() => { pose.compression=0;pose.headTilt=.45; },undefined,STOMP_SPEED));
-  actions.push(makeJump({x:t.x,z:t.z},{x:t.x,z:t.z},t.height*.4+.035,t.height*.4+.035,3.85,.85,3,t));
+  for(let stomp=1;stomp<=t.stompLimit;stomp++) {
+    actions.push(makeJump({x:t.x,z:t.z},{x:t.x,z:t.z},0,0,[3.25,3.35,3.85][stomp-1],[.72,.77,.85][stomp-1],stomp,t));
+    if(stomp<t.stompLimit) actions.push(idle(.14,`STOMP_${stomp}`,()=>{pose.compression=0;pose.headTilt=.45;},undefined,STOMP_SPEED));
+  }
   let faceYaw;
-  actions.push(idle(.90,'STANDING_ON_TARGET',u => {
+  const finish=idle(.90,'STANDING_ON_TARGET',u => {
+    // Check at execution time: letters can arrive during the current press.
+    if(queue.length) {finish.duration=0;return;}
     faceYaw ??= pose.yaw;
     const p=smooth(u/.9); pose.headTilt=mix(.55,1.50,p); pose.yaw=faceYaw+angleDiff(faceYaw,-.25)*p; pose.headYaw=angleDiff(pose.yaw,-Math.PI/2)*p; pose.compression=0;
-  },() => finishTarget(t)));
+  },() => {finishTarget(t);if(queue.length) scheduleTarget(queue.shift(),false,true);});
+  actions.push(finish);
   queueLabel();
 }
 function startIntro() {
@@ -285,7 +313,7 @@ function enqueue(raw) {
   const layout=layoutLetters(glyphs),location=findPlacement(layout);
   if(!location) { showFeedback('무대가 가득 찼어요. Reset으로 새 무대를 열어 주세요.'); return false; }
   const groupId=nextGroupId++;
-  const added=layout.members.map(g=>textObject(g.text,location.x+g.x,location.z,false,{scale:layout.scale,groupId,index:g.index,sourceText:text}));
+  const added=layout.members.map(g=>textObject(g.text,location.x+g.x,location.z,false,{scale:layout.scale,groupId,index:g.index,sourceText:text,stompLimit:glyphs.length>=3 ? 2 : 3}));
   queue.push(...added); queueLabel();
   if(!activeTarget && !currentAction && actions.length===0) scheduleTarget(queue.shift());
   return true;
@@ -333,7 +361,7 @@ function frame(now) {
     qualityFrames=0;qualityElapsed=0;
   }
   for(const t of [...targets]) {
-    if(t.spawn<1) { t.spawn=clamp(t.spawn+dt*4);t.mesh.scale.set(t.scale*t.spread,t.scale*t.squash*smooth(t.spawn),t.scale);renderer.shadowMap.needsUpdate=true; }
+    if(t.spawn<1) { t.spawn=clamp(t.spawn+dt*4);t.mesh.scale.set(t.scale*t.spread,t.scale*smooth(t.spawn),t.scale);renderer.shadowMap.needsUpdate=true; }
     if(!t.initial && t.crushedAt!==null && activeTarget!==t) {
       const fading=clamp((now-t.crushedAt-10000)/2800),opacity=1-smooth(fading);
       t.mesh.material.opacity=opacity;t.fadeUniform.value=opacity;
