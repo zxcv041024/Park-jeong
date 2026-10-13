@@ -73,7 +73,7 @@ test('placement rejects a tall glyph that cannot support a meaningful hop, inclu
 });
 
 test('legal back-row H keeps all three full stomp animations and actual lamp bounds in the responsive frame',()=> {
-  const target=glyph('H',4,0,-7),plan=planApproach(origin,target,[...originals,target]);
+  const target=glyph('H',4,0,-4),plan=planApproach(origin,target,[...originals,target]);
   assert.ok(validPlacement(target,target.width*1.2,originals,origin));assert.ok(plan);
   for(const [width,height] of [[1366,768],[1920,1080],[2560,1440],[3840,2160],[390,844]]) {
     setFrame(width,height);assert.ok(hasStompHeadroom(target,plan.approach));
@@ -83,14 +83,14 @@ test('legal back-row H keeps all three full stomp animations and actual lamp bou
       const heightCap=framedStompHeight(from,target,fromY,toY,[3.25,3.35,3.85][stomp-1]);
       assert.ok(heightCap>=MIN_STOMP_HEIGHT,`stomp ${stomp} retains a meaningful hop`);
       assert.ok(heightCap>(toY-fromY)/4,`stomp ${stomp} descends before impact`);
-      const flight=[.72,.77,.85][stomp-1],press=[.48,.62,.82][stomp-1],duration=.26+flight+press+.18;
+      const flight=[.72,.77,.85][stomp-1],press=[.48,.48,.72][stomp-1],duration=.26+flight+press+.18;
       let maximum=-Infinity;
       for(let sample=0;sample<=128;sample++) {
         const time=duration*sample/128;
         const p=jumpSample(time,{from,to:target,fromY,toY,height:heightCap,flight,prepare:.26,settle:press+.18});
         if(time>=.26+flight) {
           const u=smooth((time-.26-flight)/press);
-          p.y=target.height*mix(squash,[.7,.4,.14][stomp-1],u)+.035;
+          p.y=target.height*mix(squash,[.7,.4,.008][stomp-1],u)+.035;
           p.compression=Math.max(p.compression,.38*Math.sin(Math.PI*u));
         }
         lamp.update({...p,yaw,headYaw:0,headTilt:mix(.82,.55,clamp(p.compression))},time);

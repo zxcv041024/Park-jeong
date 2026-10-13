@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.5 — 2026-10-13
+
+- Center the title horizontally and vertically.
+- Press glyph outlines into thin floor silhouettes without rotating them.
+- Use two presses per glyph for inputs of three or more visible characters, and three for shorter inputs.
+- Continue directly to queued letters without the camera-facing pause.
+
 ## 1.0.4 — 2026-10-13
 
 - Keep Korean composition intact until the user submits the completed text.

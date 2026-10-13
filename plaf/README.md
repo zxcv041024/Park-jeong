@@ -49,3 +49,5 @@ node tests/runtime-browser.mjs
 The browser suite uses locally installed Google Chrome and checks the actual introduction, G/B/HELLO queue, persistent marks, controls, interruption-safe reset, replay, browser errors, and 1366×768 through 3840×2160 plus portrait mobile. Screenshots and a result snapshot are saved in `tests/evidence`.
 
 The classic serif is Three.js's bundled Optimer Bold font. Other Unicode graphemes, including Korean, use the operating system's bold serif fonts on a lit glyph surface. No film studio logo, character asset or recorded film sound is used.
+
+Inputs with three or more visible glyphs use two presses per letter; shorter inputs and the intro use three. Queued targets skip the camera-facing pause. Final presses deform the glyph outline into a thin floor silhouette without rotating its mesh.

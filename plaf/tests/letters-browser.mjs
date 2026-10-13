@@ -49,6 +49,13 @@ try {
   assert.equal(snapshot.animationSpeed, 1.3);
   assert.equal(snapshot.stompSpeed, 1.2);
   assert.equal(snapshot.fontFamily, 'Optimer Bold');
+  for(const [width,height] of [[1366,768],[1920,1080],[2560,1440],[3840,2160]]) {
+    await resizeCheck(width,height);
+    const bounds=(await snap()).initialFrame;
+    assert.ok(Math.abs(bounds.left+bounds.right)<.005,'Title horizontal center');
+    assert.ok(Math.abs(bounds.top+bounds.bottom)<.025,'Title vertical center');
+  }
+  await resizeCheck(1366,768);
 
   await submit('HELLO');
   snapshot = await snap();
@@ -79,7 +86,7 @@ try {
   }, hello[0].id, { timeout: 40000 });
   snapshot = await snap();
   const pressing = groupTargets(snapshot, 'HELLO');
-  assert.ok(pressing[0].squash < 1 && pressing[0].squash > .14);
+  assert.ok(pressing[0].squash < 1 && pressing[0].squash > .008);
   assert.ok(pressing.slice(1).every(target => target.squash === 1 && target.stomps === 0), 'Only H should squash during its first press');
   await page.screenshot({ path: 'tests/evidence/letters-first-press.png' });
 
@@ -96,18 +103,23 @@ try {
   assert.deepEqual(completed.map(target => target.id), hello.map(target => target.id));
   assert.deepEqual(completed.map(target => target.text), ['H', 'E', 'L', 'L', 'O']);
   assert.deepEqual(completed.map(target => target.index), [0, 1, 2, 3, 4]);
-  assert.ok(completed.every(target => target.stomps === 3 && target.squash === .14), 'Every individual glyph needs exactly three impacts and the final squash');
+  assert.ok(completed.every(target => target.stomps === 2 && target.squash === .008), 'Every individual glyph needs exactly two impacts and the final squash');
   assert.deepEqual(snapshot.completed.slice(0, 5), ['H', 'E', 'L', 'L', 'O']);
   const checks = await page.evaluate(() => { clearInterval(window.__letterChecksTimer); return window.__letterChecks; });
-  assert.deepEqual(checks.impacts, hello.flatMap(target => [1, 2, 3].map(impact => ({ id: target.id, text: target.text, index: target.index, impact }))));
-  assert.ok(checks.samples.some(sample => sample.some(target => target.squash > .14 && target.squash < 1)));
+  assert.deepEqual(checks.impacts, hello.flatMap(target => [1, 2].map(impact => ({ id: target.id, text: target.text, index: target.index, impact }))));
+  assert.ok(checks.samples.some(sample => sample.some(target => target.squash > .008 && target.squash < 1)));
   for (const sample of checks.samples) {
-    assert.ok(sample.filter(target => target.squash > .14 && target.squash < 1).length <= 1, 'Two sibling letters squashed together');
+    assert.ok(sample.filter(target => target.squash > .008 && target.squash < 1).length <= 1, 'Two sibling letters squashed together');
     for (const target of sample.filter(target => target.stomps > 0)) {
-      assert.ok(sample.filter(other => other.index < target.index).every(other => other.squash === .14 && other.stomps === 3), 'A later letter began before earlier letters finished');
+      assert.ok(sample.filter(other => other.index < target.index).every(other => other.squash === .008 && other.stomps === 2), 'A later letter began before earlier letters finished');
     }
   }
-  console.log('PASS HELLO: separate H/E/L/L/O targets, independent presses, exactly three impacts each, ABC queued behind the word');
+  assert.equal(snapshot.history.filter(state=>state==='LOOK_AT_TARGET').length,1,'Queued glyphs skip rediscovery and camera-facing pause');
+  const last=snapshot.targets.find(t=>t.id===hello.at(-1).id);
+  assert.deepEqual(last.rotation,[0,0,0]);
+  assert.ok(last.geometryBounds.max[1]-last.geometryBounds.min[1]<.05,'Final glyph is thin vertically');
+  assert.ok(last.geometryBounds.max[2]-last.geometryBounds.min[2]>.5,'Original outline spreads onto floor');
+  console.log('PASS HELLO: separate H/E/L/L/O targets, independent presses, exactly two impacts each, ABC queued behind the word');
 
   await page.locator('#reset').click();
   snapshot = await snap();
@@ -122,6 +134,8 @@ try {
   snapshot = await snap();
   checkGroup(groupTargets(snapshot, 'A B'), ['A', 'B']);
   assert.equal(snapshot.targets.filter(target => !target.initial).length, 2, 'Whitespace must not become an invisible stomp target');
+  await page.waitForFunction(()=>window.__PLAF__.snapshot().completedDetails.length===2,{}, {timeout:65000});
+  assert.ok((await snap()).completedDetails.every(t=>t.stomps===3 && t.squash===.008),'Two glyphs keep three presses each');
   await page.locator('#reset').click();
   await submit('가가');
   snapshot = await snap();
