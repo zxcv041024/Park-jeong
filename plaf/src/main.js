@@ -23,23 +23,31 @@ camera.position.copy(cameraHome); camera.lookAt(cameraAim);
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false, powerPreference:'high-performance' }); }
 catch { $('loading').hidden = true; $('fatal').hidden = false; throw new Error('WebGL initialization failed'); }
-renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled = true;
+// A wallpaper shares the GPU with every foreground app. Bound its pixel workload.
+let renderQuality=1,qualityFrames=0,qualityElapsed=0;
+const renderRatio=()=>renderQuality*Math.min(devicePixelRatio,1,1600/innerWidth,900/innerHeight);
+renderer.setPixelRatio(renderRatio()); renderer.shadowMap.enabled = true;
+renderer.shadowMap.autoUpdate=false; renderer.shadowMap.needsUpdate=true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.18;
 scene.add(new THREE.HemisphereLight(0xedf3ff, 0x798fa5, 2.4));
 const key = new THREE.DirectionalLight(0xfffcf2, 3.1); key.position.set(-7,13,9); key.castShadow = true;
-key.shadow.mapSize.set(2048,2048); Object.assign(key.shadow.camera,{ left:-19,right:19,top:15,bottom:-15,near:.1,far:40 });
+key.shadow.mapSize.set(1024,1024); Object.assign(key.shadow.camera,{ left:-19,right:19,top:15,bottom:-15,near:.1,far:40 });
 key.shadow.bias = -.0003; key.shadow.normalBias = .025; key.shadow.radius = 4; key.shadow.intensity = .36; scene.add(key);
 const fill = new THREE.DirectionalLight(0xc9ddff,.9); fill.position.set(9,5,-8); scene.add(fill);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(240,240), new THREE.MeshStandardMaterial({ color:0x738fae,roughness:1,metalness:0 }));
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(240,240), new THREE.MeshLambertMaterial({ color:0x738fae }));
 floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 const font = new FontLoader().parse(serifData);
-const ink = new THREE.MeshStandardMaterial({ color:0x090b0f, roughness:.48,metalness:.08 });
+const ink = new THREE.MeshLambertMaterial({ color:0x090b0f });
+const glyphGeometryCache=new Map();
 function makeText(text) {
   if(Array.from(text).every(c=>c===' ' || font.data.glyphs[c])) {
+    const cached=glyphGeometryCache.get(text);
+    if(cached) return {mesh:new THREE.Mesh(cached.geometry,ink),width:cached.width,height:cached.height};
     const geometry=new TextGeometry(text,{font,size:3.25,depth:.075,curveSegments:10,bevelEnabled:true,bevelThickness:.012,bevelSize:.006,bevelSegments:2});
     geometry.computeBoundingBox();const box=geometry.boundingBox;
     geometry.translate(-(box.max.x+box.min.x)/2,-box.min.y,0);
+    geometry.userData.cached=true;glyphGeometryCache.set(text,{geometry,width:box.max.x-box.min.x,height:box.max.y-box.min.y});
     return {mesh:new THREE.Mesh(geometry,ink),width:box.max.x-box.min.x,height:box.max.y-box.min.y};
   }
   // Keep Unicode input playable using a lit, alpha-tested serif glyph surface.
@@ -50,7 +58,7 @@ function makeText(text) {
   ctx.font=typeface;ctx.fillStyle='white';ctx.fillText(text,16,ascent+16);
   const height=2.95,width=surface.width/surface.height*height;
   const texture=new THREE.CanvasTexture(surface);texture.colorSpace=THREE.SRGBColorSpace;
-  const material=new THREE.MeshStandardMaterial({map:texture,color:0x090b0f,roughness:.5,alphaTest:.12,side:THREE.DoubleSide});
+  const material=new THREE.MeshLambertMaterial({map:texture,color:0x090b0f,alphaTest:.12,side:THREE.DoubleSide});
   const geometry=new THREE.PlaneGeometry(width,height);geometry.translate(0,height/2,0);
   const mesh=new THREE.Mesh(geometry,material);
   mesh.customDepthMaterial=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,map:texture,alphaTest:.12});
@@ -114,15 +122,17 @@ function textObject(text, x, z, initial=false,options={}) {
   targets.push(t); return t;
 }
 function updateTarget(t, scaleY) {
+  renderer.shadowMap.needsUpdate=true;
   t.squash = scaleY;
   t.spread = 1 + (1-scaleY)*.10;
   t.mesh.rotation.set(0,0,0);
   t.mesh.scale.set(t.scale*t.spread,t.scale*scaleY,t.scale);
 }
 function disposeTarget(t) {
-  scene.remove(t.mesh);t.mesh.geometry.dispose();t.mesh.material.map?.dispose();t.mesh.material.dispose();t.mesh.customDepthMaterial?.dispose();
+  scene.remove(t.mesh);if(!t.mesh.geometry.userData.cached) t.mesh.geometry.dispose();t.mesh.material.map?.dispose();t.mesh.material.dispose();t.mesh.customDepthMaterial?.dispose();renderer.shadowMap.needsUpdate=true;
 }
 function clearStage() {
+  renderer.shadowMap.needsUpdate=true;
   for (const t of targets) disposeTarget(t);
   targets = []; queue = []; actions = []; currentAction = null; activeTarget = null; currentStanding = null; actionTime=0;
   telemetry.completed=[];telemetry.completedDetails=[]; telemetry.landings=0; telemetry.hops=0; telemetry.history=[];
@@ -268,7 +278,7 @@ function enqueue(raw) {
   for(const token of tokens) {
     if(/^\s+$/u.test(token)) {extraGapBefore+=1;continue;}
     const glyph=makeText(token);glyphs.push({text:token,width:glyph.width,height:glyph.height,extraGapBefore});extraGapBefore=0;
-    glyph.mesh.geometry.dispose();
+    if(!glyph.mesh.geometry.userData.cached) glyph.mesh.geometry.dispose();
     if(glyph.ownedMaterial) {glyph.mesh.material.map.dispose();glyph.mesh.material.dispose();glyph.mesh.customDepthMaterial.dispose();}
   }
   if(!glyphs.length) return false;
@@ -280,7 +290,22 @@ function enqueue(raw) {
   if(!activeTarget && !currentAction && actions.length===0) scheduleTarget(queue.shift());
   return true;
 }
-$('letter-form').addEventListener('submit',e=> { e.preventDefault(); if(enqueue(input.value)) { input.value='';input.focus(); } });
+let composing=false,compositionEndedAt=-Infinity;
+input.addEventListener('compositionstart',()=>{composing=true;});
+input.addEventListener('compositionend',()=>{composing=false;compositionEndedAt=performance.now();});
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && (composing || e.isComposing || e.keyCode===229 || performance.now()-compositionEndedAt<50)) e.preventDefault();
+});
+$('letter-form').addEventListener('submit',e=> { e.preventDefault(); if(composing) return; if(enqueue(input.value)) { input.value='';input.focus(); } });
+// Lively's native textbox supports Korean IME without raw keyboard forwarding.
+let livelyLetters='';
+window.livelyPropertyListener=(name,value)=>{
+  if(name==='letters') {livelyLetters=String(value ?? '');return;}
+  if(value!==true && value!=='true') return; // Ignore initialization of button values.
+  if(name==='add') {if(enqueue(livelyLetters)) showFeedback('글자를 추가했어요.');}
+  else if(name==='reset') reset();
+  else if(name==='replay') startIntro();
+};
 $('sound').addEventListener('click',async()=> {
   try { await sound.enable(!sound.enabled); $('sound').textContent=`Sound ${sound.enabled?'ON':'OFF'}`; $('sound').setAttribute('aria-pressed',String(sound.enabled)); sound.play('hinge'); }
   catch { showFeedback('브라우저에서 소리를 켜지 못했습니다.'); }
@@ -289,20 +314,30 @@ $('reset').addEventListener('click',reset); $('replay').addEventListener('click'
 function resize() {
   const aspect=innerWidth/innerHeight, h=Math.max(MIN_FRAME_HEIGHT,24/aspect);
   camera.left=-h*aspect/2; camera.right=h*aspect/2;camera.top=h/2+FRAME_UP_OFFSET;camera.bottom=-h/2+FRAME_UP_OFFSET; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(renderRatio());renderer.setSize(innerWidth,innerHeight);
 }
 addEventListener('resize',resize); resize();
 let last=performance.now(), raf, hidden=false;
 document.addEventListener('visibilitychange',()=> { hidden=document.hidden; last=performance.now(); });
 function frame(now) {
   raf=requestAnimationFrame(frame);
-  const dt=hidden ? 0 : Math.min((now-last)/1000,.045)*ANIMATION_SPEED; last=now;clock+=dt;
+  const elapsed=(now-last)/1000;
+  const dt=hidden ? 0 : Math.min(elapsed,.045)*ANIMATION_SPEED; last=now;clock+=dt;
   if(hidden) return;
+  // Reduce pixel shading on a busy GPU, without changing physics or hop timing.
+  if(elapsed>0) {qualityFrames++;qualityElapsed+=Math.min(elapsed,.25);}
+  if(qualityElapsed>=2) {
+    if(qualityElapsed/qualityFrames>.025 && renderQuality>.46) {
+      renderQuality=Math.max(.45,renderQuality*.8);renderer.setPixelRatio(renderRatio());renderer.setSize(innerWidth,innerHeight);
+    }
+    qualityFrames=0;qualityElapsed=0;
+  }
   for(const t of [...targets]) {
-    if(t.spawn<1) { t.spawn=clamp(t.spawn+dt*4);t.mesh.scale.set(t.scale*t.spread,t.scale*t.squash*smooth(t.spawn),t.scale); }
+    if(t.spawn<1) { t.spawn=clamp(t.spawn+dt*4);t.mesh.scale.set(t.scale*t.spread,t.scale*t.squash*smooth(t.spawn),t.scale);renderer.shadowMap.needsUpdate=true; }
     if(!t.initial && t.crushedAt!==null && activeTarget!==t) {
       const fading=clamp((now-t.crushedAt-10000)/2800),opacity=1-smooth(fading);
       t.mesh.material.opacity=opacity;t.fadeUniform.value=opacity;
+      if(fading>0 && fading<1) renderer.shadowMap.needsUpdate=true;
       if(currentStanding===t && !currentAction && !activeTarget) pose.y=.035+t.height*t.squash*opacity;
       if(fading>=1) {disposeTarget(t);targets=targets.filter(other=>other!==t);if(currentStanding===t) {currentStanding=null;pose.y=0;state('IDLE');}}
     }

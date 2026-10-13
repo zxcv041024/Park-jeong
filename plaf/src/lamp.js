@@ -10,7 +10,7 @@ export function createLamp(scene) {
   const inner = new THREE.MeshStandardMaterial({ color: 0xfff4d9, roughness: .55, side: THREE.BackSide });
   const bulbMaterial = new THREE.MeshStandardMaterial({ color: 0xfff8df, emissive: 0xffedc2, emissiveIntensity: 3 });
   const mesh = (geo, mat, parent, pos = [0, 0, 0]) => {
-    const m = new THREE.Mesh(geo, mat); m.position.set(...pos); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
+    const m = new THREE.Mesh(geo, mat); m.position.set(...pos); m.castShadow = false; m.receiveShadow = true; parent.add(m); return m;
   };
   const base = new THREE.Group(); root.add(base);
   mesh(new THREE.CylinderGeometry(.53, .58, .065, 48), rubber, base, [0, .035, 0]);
@@ -47,7 +47,7 @@ export function createLamp(scene) {
   mesh(new THREE.CylinderGeometry(.07, .11, .14, 20), brass, head, [0, .36, 0]);
   mesh(new THREE.SphereGeometry(.14, 24, 16), bulbMaterial, head, [0, -.14, 0]);
   const bulb = new THREE.Object3D(); bulb.position.set(0, -.23, 0); head.add(bulb);
-  const spot = new THREE.SpotLight(0xfff2d0, 23, 24, .48, .75, 1.4); spot.castShadow = true;
+  const spot = new THREE.SpotLight(0xfff2d0, 23, 24, .48, .75, 1.4); spot.castShadow = false;
   spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -.00015; spot.shadow.normalBias = .03;
   scene.add(spot, spot.target);
   const bounce = new THREE.PointLight(0xfff0d3, .65, 2.5); head.add(bounce);

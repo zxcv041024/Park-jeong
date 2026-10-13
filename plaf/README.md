@@ -33,7 +33,9 @@ Each upright letter has a rectangular physical footprint inflated by the lamp's 
 
 Added letters fade independently using elapsed time after the final press. Their shadows fade with dithered depth coverage. An idle lamp standing on a fading letter lowers gently to the floor and never remains suspended after the letter disappears.
 
-Placement checks world bounds, the current lamp, existing objects, projected screen overlap, viewport margins, and the input area. Stomp arcs fit the available camera headroom, and placement reserves enough height for a visible hop. Camera dimensions follow viewport aspect ratio; rendering resolution is capped at 2× device pixel ratio.
+Placement checks world bounds, the current lamp, existing objects, projected screen overlap, viewport margins, and the input area. Stomp arcs fit the available camera headroom, and placement reserves enough height for a visible hop. Camera dimensions follow viewport aspect ratio. Rendering starts at no more than 1600×900 pixels and one device pixel per CSS pixel, then reduces resolution when sustained frame intervals exceed 25ms. Physics speed remains unchanged. Letter geometry is reused, directional shadows refresh only when letters change, and the lamp keeps its animated contact shadow and spotlight.
+
+For Lively Wallpaper, import the built `dist` folder as a local HTML project. `LivelyProperties.json` supplies a native **글자 입력** textbox and **입력한 글자 추가** button in **Customize**. This supports Korean IME without desktop raw-keyboard forwarding. Use Lively's mouse input mode to avoid duplicated characters; the in-page controls remain available. Korean composition-confirmation Enter never submits a partial glyph.
 
 ## Verify
 
@@ -41,6 +43,7 @@ Placement checks world bounds, the current lamp, existing objects, projected scr
 pnpm test
 node tests/browser.mjs
 node tests/letters-browser.mjs
+node tests/runtime-browser.mjs
 ```
 
 The browser suite uses locally installed Google Chrome and checks the actual introduction, G/B/HELLO queue, persistent marks, controls, interruption-safe reset, replay, browser errors, and 1366×768 through 3840×2160 plus portrait mobile. Screenshots and a result snapshot are saved in `tests/evidence`.

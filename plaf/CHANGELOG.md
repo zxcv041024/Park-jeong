@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4 — 2026-10-13
+
+- Keep Korean composition intact until the user submits the completed text.
+- Add a Lively native input panel for Korean text without duplicate raw keyboard forwarding.
+- Bound render resolution, adapt to slow frames, cache letter geometry, and update letter shadows only when needed.
+- Use simpler lit floor and letter materials while keeping articulated hops, spotlight, contact shadows, and three independent presses.
+
 ## 1.0.3 — 2026-10-08
 
 - Place multi-character input as a word, then press each visible grapheme three times in left-to-right order.
